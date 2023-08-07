@@ -1,0 +1,12 @@
+{
+  "extends": ["plugin:perfectionist/recommended-line-length", "react-app", "prettier"],
+  "plugins": ["prettier"],
+  "rules": {
+    "prettier/prettier": [
+      "error",
+      {
+        "endOfLine": "auto"
+      }
+    ]
+  }
+}
