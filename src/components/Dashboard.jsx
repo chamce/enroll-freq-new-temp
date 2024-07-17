@@ -1,14 +1,16 @@
 import { useDeferredValue, useState, useMemo } from "react";
 import { csv } from "d3";
 
-import { getReferenceLines } from "../helpers/getReferenceLines";
-import { handleDataUpdated } from "../helpers/handleDataUpdated";
+import { getStandardDeviation } from "../helpers/getStandardDeviation";
 import { useResettableState } from "../hooks/useResettableState";
+import { handleDataUpdated } from "../helpers/handleDataUpdated";
+import { getReferenceLines } from "../helpers/getReferenceLines";
 import { SingleSelectDropdown } from "./SingleSelectDropdown";
-import { usePreviousState } from "../hooks/usePreviousState";
 import { getFilteredData } from "../helpers/getFilteredData";
+import { usePreviousState } from "../hooks/usePreviousState";
 import { getChartData } from "../helpers/getChartData";
 import { flattenData } from "../helpers/flattenData";
+import { getAverage } from "../helpers/getAverage";
 import { getYDomain } from "../helpers/getYDomain";
 import { formatKey } from "../helpers/formatKey";
 import { usePromise } from "../hooks/usePromise";
@@ -67,7 +69,30 @@ export const Dashboard = () => {
     [flattenedData, deferredXAxisSelection, lines],
   );
 
-  // console.log(chartData, flattenedData);
+  // questions
+  // should range of days be based on last day in chart?
+  // should final enrollment numbers be based on current enrollment at last day in chart?
+
+  const semestersDescending = [...lineDataKeySet].sort(
+    (semesterA, semesterB) => Number(semesterB.split(" ")[1]) - Number(semesterA.split(" ")[1]),
+  );
+
+  const latestTerm = semestersDescending[0];
+
+  console.log(flattenedData);
+
+  // const dataSorted = [...flattenedData].sort(({ days: daysA }, { days: daysB }) => Number(daysA) - Number(daysB));
+
+  const latestTermData = flattenedData.filter((object) => latestTerm in object);
+
+  const todaysRecord = latestTermData[latestTermData.length - 1];
+
+  const gatheredEnrollment = useMemo(
+    () => gatherConfidenceIntervals({ todaysRecord, latestTerm }),
+    [todaysRecord, latestTerm],
+  );
+
+  console.log(gatheredEnrollment);
 
   return (
     <div className="vstack gap-4">
@@ -125,6 +150,105 @@ export const Dashboard = () => {
       ></MyLineChart>
     </div>
   );
+};
+
+const rangeOfDaysConstant = 61;
+
+const getRangeOfDays = (numberOfDays) => rangeOfDaysConstant - Number(numberOfDays);
+
+const zScoreTable = { 99: 2.576, 90: 1.645, 95: 1.96 };
+
+const initializeArrayFrom1ToN = (length) => Array.from({ length }, (_, i) => i + 1);
+
+const gatherConfidenceIntervals = ({ todaysRecord, latestTerm }) => {
+  if (todaysRecord) {
+    console.log("hhhhhhhhhhhhhhhhhhhhh", todaysRecord);
+
+    const rows = Object.values(todaysRecord.lookup);
+
+    const today = rows.find(({ term_desc }) => term_desc === latestTerm).days;
+
+    const rangeOfDays = getRangeOfDays(today);
+
+    const problemData = rows.map(
+      ({ Official_each_day: finalEnrollment, _FREQ__each_day: enrollment, term_desc: term, days: day }) => {
+        const enrollmentDifference = finalEnrollment - enrollment;
+
+        const dailyAccrual = enrollmentDifference / rangeOfDays;
+
+        return {
+          enrollmentDifference,
+          finalEnrollment,
+          dailyAccrual,
+          enrollment,
+          term,
+          day,
+        };
+      },
+    );
+
+    const past = problemData.filter(({ term }) => term !== latestTerm);
+
+    const dailyAccrualValues = past.map(({ dailyAccrual }) => dailyAccrual);
+
+    const average = getAverage(...dailyAccrualValues);
+
+    const standardDeviation = getStandardDeviation(...dailyAccrualValues);
+
+    const confidenceIntervalRanges = Object.entries(zScoreTable).map(([percent, zScore]) => {
+      const change = standardDeviation * zScore;
+
+      const high = average + change;
+
+      const low = average - change;
+
+      return {
+        percent,
+        zScore,
+        change,
+        high,
+        low,
+      };
+    });
+
+    const futureRecord = problemData.find(({ term }) => term === latestTerm);
+
+    const { enrollment, term, day } = futureRecord;
+
+    const days = initializeArrayFrom1ToN(rangeOfDays);
+
+    const confidenceIntervals = confidenceIntervalRanges.map(({ percent, high, low }) => {
+      return {
+        data: days.map((daysElapsed) => ({
+          amount: {
+            predicted: enrollment + daysElapsed * average,
+            max: enrollment + daysElapsed * high,
+            min: enrollment + daysElapsed * low,
+          },
+          day: `${daysElapsed + Number(day)}`,
+        })),
+        percent,
+      };
+    });
+
+    const gathered = {
+      enrollment: {
+        priorYears: past.map(({ enrollmentDifference, finalEnrollment, dailyAccrual, enrollment, term, day }) => ({
+          amount: { difference: enrollmentDifference, final: finalEnrollment, current: enrollment, dailyAccrual },
+          term,
+          day,
+        })),
+        thisYear: {
+          amount: { future: { confidenceIntervals, rangeOfDays }, current: enrollment },
+          term,
+          day,
+        },
+        dailyAccrual: { standardDeviation, average },
+      },
+    };
+
+    return gathered;
+  }
 };
 
 /*
