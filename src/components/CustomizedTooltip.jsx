@@ -60,9 +60,7 @@ export const CustomizedTooltip = (props) => {
                   </th>
                   <td>{objectPayload[xAxisSelection]}</td>
                   {otherXOptions.map((name) => (
-                    <td key={name}>
-                      {!dataRow ? (isPredicted && name === "date" ? objectPayload.date : "...") : dataRow[name]}
-                    </td>
+                    <td key={name}>{!dataRow ? (isPredicted ? objectPayload[name] : "...") : dataRow[name]}</td>
                   ))}
                   <td
                     style={

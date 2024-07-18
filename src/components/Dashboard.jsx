@@ -70,14 +70,17 @@ export const Dashboard = () => {
 
   const todaysRecord = latestTermData[latestTermData.length - 1];
 
-  const futureData = useMemo(() => gatherConfidenceIntervals({ todaysRecord, latestTerm }), [todaysRecord, latestTerm]);
+  const futureData = useMemo(
+    () => gatherConfidenceIntervals({ xAxisSelection: deferredXAxisSelection, todaysRecord, latestTerm }),
+    [todaysRecord, latestTerm, deferredXAxisSelection],
+  );
 
   const allData = useMemo(
     () =>
       deferredYAxisSelection === "each_day" && predictOn
-        ? flattenedData.map(({ days, ...rest }) => ({ days, ...rest, ...futureData[days] }))
+        ? flattenedData.map((element) => ({ ...element, ...futureData[element[deferredXAxisSelection]] }))
         : flattenedData,
-    [flattenedData, futureData, deferredYAxisSelection, predictOn],
+    [flattenedData, futureData, deferredYAxisSelection, predictOn, deferredXAxisSelection],
   );
 
   const updateBrushIndexes = () => setBrushIndexes({ endIndex: allData.length - 1, startIndex: 0 });
@@ -180,7 +183,7 @@ export const Dashboard = () => {
 
 const zScoreTable = { 99: 2.576, 90: 1.645, 95: 1.96 };
 
-const gatherConfidenceIntervals = ({ todaysRecord, latestTerm }) => {
+const gatherConfidenceIntervals = ({ xAxisSelection, todaysRecord, latestTerm }) => {
   if (todaysRecord) {
     const rows = Object.values(todaysRecord.lookup);
 
@@ -264,7 +267,9 @@ const gatherConfidenceIntervals = ({ todaysRecord, latestTerm }) => {
         }),
       );
 
-      object[moment] = { days: moment, date, ...point, ...areas };
+      const id = xAxisSelection === "days" ? moment : date;
+
+      object[id] = { days: moment, date, ...point, ...areas };
     });
 
     return object;

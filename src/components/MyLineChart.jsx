@@ -10,7 +10,7 @@ import {
   XAxis,
   Line,
 } from "recharts";
-import { useCallback, useState, memo } from "react";
+import { useState, memo } from "react";
 
 import { CustomizedTooltip } from "./CustomizedTooltip";
 import { formatNumber } from "../helpers/formatNumber";
@@ -29,21 +29,60 @@ export const MyLineChart = memo(
     lines,
     data,
   }) => {
-    const [activeLine, setActiveLine] = useState();
+    const [{ clicked, entered }, setState] = useState({ clicked: null, entered: null });
 
-    const handleMouseEnter = (dataKey) => setActiveLine(dataKey);
+    const handleMouseEnter = ({ dataKey }) => setState((state) => ({ ...state, entered: dataKey }));
 
-    const handleMouseLeave = () => setActiveLine(null);
+    const handleMouseLeave = () => setState((state) => ({ ...state, entered: null }));
 
-    const styleLine = useCallback(
-      ({ dataKey }) =>
-        dataKey === activeLine
-          ? {
-              filter: "drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5))",
-            }
-          : null,
-      [activeLine],
-    );
+    const handleClick = ({ dataKey }) =>
+      setState((state) => ({ ...state, clicked: state.clicked === dataKey ? null : dataKey }));
+
+    const isActive = (dataKey) => {
+      if (clicked === null && entered === null) {
+        return true;
+      }
+
+      if (entered !== null) {
+        if (dataKey === entered) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+
+      if (clicked !== null) {
+        if (dataKey === clicked) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+    };
+
+    const getOpacity = ({ dataKey }) => (isActive(dataKey) ? 1 : 0.375);
+
+    const indicateActiveLegendText = (dataKey, entry) => {
+      const { color } = entry;
+
+      const isClicked = clicked === dataKey;
+
+      const isEntered = entered === dataKey;
+
+      const className = [
+        { string: "fw-bold", keep: isEntered },
+        { string: "text-decoration-underline", keep: isClicked },
+      ]
+        .filter(({ keep }) => keep)
+        .map(({ string }) => string)
+        .join(" ");
+
+      return (
+        <span className={className} style={{ color }}>
+          {dataKey}
+        </span>
+      );
+    };
 
     return (
       <ResponsiveContainer height={450}>
@@ -85,17 +124,15 @@ export const MyLineChart = memo(
                 xAxisSelection={xAxisSelection}
                 yAxisSelection={yAxisSelection}
                 tooltipOn={tooltipOn}
+                isActive={isActive}
               />
             }
           />
-          {/* <Tooltip
-                labelFormatter={(label) => formatKey(xAxisSelection) + " : " + label}
-                formatter={(value, name) => [formatNumber(value), name]}
-                wrapperClassName={tooltipActive ? "" : "d-none"}
-              ></Tooltip> */}
           <Legend
-            onMouseEnter={({ dataKey }) => handleMouseEnter(dataKey)}
+            formatter={indicateActiveLegendText}
+            onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
+            onClick={handleClick}
             verticalAlign="top"
           ></Legend>
           {referenceLines.map(([x, stroke], i) => (
@@ -111,15 +148,12 @@ export const MyLineChart = memo(
           {Array.isArray(lines) &&
             lines.map((line) => (
               <Line
-                style={styleLine(line)}
                 {...line}
-                onMouseEnter={({ name }) => handleMouseEnter(name)}
-                onMouseLeave={handleMouseLeave}
+                strokeOpacity={getOpacity(line)}
                 name={line.dataKey}
-                // className={`→${line.dataKey}`}
                 key={line.dataKey}
-                type="monotone"
                 strokeWidth={2}
+                type="monotone"
                 dot={false}
               ></Line>
             ))}
