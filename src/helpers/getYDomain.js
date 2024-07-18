@@ -23,5 +23,5 @@ export const getYDomain = (data, brushIndexes, lineDataKeySet) => {
     ),
   );
 
-  return [min, max];
+  return [Math.floor(min), Math.ceil(max)];
 };

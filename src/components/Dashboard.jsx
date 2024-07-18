@@ -1,13 +1,15 @@
 import { useDeferredValue, useState, useMemo } from "react";
 import { csv } from "d3";
 
+import { initializeArrayFrom1ToN } from "../helpers/initializeArrayFrom1ToN";
 import { getStandardDeviation } from "../helpers/getStandardDeviation";
-import { useResettableState } from "../hooks/useResettableState";
 import { handleDataUpdated } from "../helpers/handleDataUpdated";
 import { getReferenceLines } from "../helpers/getReferenceLines";
+import { useResettableState } from "../hooks/useResettableState";
 import { SingleSelectDropdown } from "./SingleSelectDropdown";
 import { getFilteredData } from "../helpers/getFilteredData";
 import { usePreviousState } from "../hooks/usePreviousState";
+import { getRangeOfDays } from "../helpers/getRangeOfDays";
 import { getChartData } from "../helpers/getChartData";
 import { flattenData } from "../helpers/flattenData";
 import { getAverage } from "../helpers/getAverage";
@@ -27,6 +29,7 @@ export const Dashboard = () => {
   const data = usePromise(promise);
   const [zoomOn, setZoomOn] = useState(true);
   const [tooltipOn, setTooltipOn] = useState(true);
+  const [predictOn, setPredictOn] = useState(true);
   const [xAxisSelection, setXAxisSelection] = useState(xAxisKeys[0]);
   const [yAxisSelection, setYAxisSelection] = useState(yAxisOptions[0]);
   const [brushIndexes, setBrushIndexes] = useState({ startIndex: 0, endIndex: 1 });
@@ -55,31 +58,11 @@ export const Dashboard = () => {
     [deferredXAxisSelection, deferredYAxisSelection, chartData],
   );
 
-  const updateBrushIndexes = () => setBrushIndexes({ endIndex: flattenedData.length - 1, startIndex: 0 });
-
-  usePreviousState(flattenedData, updateBrushIndexes);
-
-  const yMinMax = useMemo(
-    () => getYDomain(flattenedData, brushIndexes, lineDataKeySet),
-    [flattenedData, brushIndexes, lineDataKeySet],
-  );
-
-  const referenceLines = useMemo(
-    () => getReferenceLines({ xAxis: deferredXAxisSelection, data: flattenedData, lines }),
-    [flattenedData, deferredXAxisSelection, lines],
-  );
-
-  // questions
-  // should range of days be based on last day in chart?
-  // should final enrollment numbers be based on current enrollment at last day in chart?
-
   const semestersDescending = [...lineDataKeySet].sort(
     (semesterA, semesterB) => Number(semesterB.split(" ")[1]) - Number(semesterA.split(" ")[1]),
   );
 
   const latestTerm = semestersDescending[0];
-
-  console.log(flattenedData);
 
   // const dataSorted = [...flattenedData].sort(({ days: daysA }, { days: daysB }) => Number(daysA) - Number(daysB));
 
@@ -87,12 +70,41 @@ export const Dashboard = () => {
 
   const todaysRecord = latestTermData[latestTermData.length - 1];
 
-  const gatheredEnrollment = useMemo(
-    () => gatherConfidenceIntervals({ todaysRecord, latestTerm }),
-    [todaysRecord, latestTerm],
+  const futureData = useMemo(() => gatherConfidenceIntervals({ todaysRecord, latestTerm }), [todaysRecord, latestTerm]);
+
+  const allData = useMemo(
+    () =>
+      deferredYAxisSelection === "each_day" && predictOn
+        ? flattenedData.map(({ days, ...rest }) => ({ days, ...rest, ...futureData[days] }))
+        : flattenedData,
+    [flattenedData, futureData, deferredYAxisSelection, predictOn],
   );
 
-  console.log(gatheredEnrollment);
+  const updateBrushIndexes = () => setBrushIndexes({ endIndex: allData.length - 1, startIndex: 0 });
+
+  usePreviousState(allData, updateBrushIndexes);
+
+  const yMinMax = useMemo(
+    () => getYDomain(allData, brushIndexes, lineDataKeySet),
+    [allData, brushIndexes, lineDataKeySet],
+  );
+
+  const referenceLines = useMemo(
+    () => getReferenceLines({ xAxis: deferredXAxisSelection, data: allData, lines }),
+    [allData, deferredXAxisSelection, lines],
+  );
+
+  const predictionFinals = useMemo(() => {
+    const array = allData.filter((element) => "predicted" in element);
+
+    const last = array[array.length - 1];
+
+    const finals = {};
+
+    last && last.predicted.forEach((key) => (finals[key] = last[key]));
+
+    return finals;
+  }, [allData]);
 
   return (
     <div className="vstack gap-4">
@@ -137,36 +149,46 @@ export const Dashboard = () => {
             Zoom
           </button>
         </div>
+        <div className="col">
+          <button
+            className="btn btn-light btn-solid icon-link d-flex justify-content-center align-items-center w-100"
+            onClick={() => setPredictOn((condition) => !condition)}
+            data-bs-auto-close="outside"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            type="button"
+          >
+            <Checkbox active={predictOn}></Checkbox>
+            Predict
+          </button>
+        </div>
       </div>
       <MyLineChart
         yMinMax={deferredZoomOn ? yMinMax : [0, "auto"]}
-        yAxisSelection={deferredYAxisSelection}
         xAxisSelection={deferredXAxisSelection}
+        yAxisSelection={deferredYAxisSelection}
+        predictionFinals={predictionFinals}
         setBrushIndexes={setBrushIndexes}
         referenceLines={referenceLines}
         tooltipOn={deferredTooltipOn}
-        data={flattenedData}
+        data={allData}
         lines={lines}
       ></MyLineChart>
     </div>
   );
 };
 
-const rangeOfDaysConstant = 61;
-
-const getRangeOfDays = (numberOfDays) => rangeOfDaysConstant - Number(numberOfDays);
-
 const zScoreTable = { 99: 2.576, 90: 1.645, 95: 1.96 };
-
-const initializeArrayFrom1ToN = (length) => Array.from({ length }, (_, i) => i + 1);
 
 const gatherConfidenceIntervals = ({ todaysRecord, latestTerm }) => {
   if (todaysRecord) {
-    console.log("hhhhhhhhhhhhhhhhhhhhh", todaysRecord);
-
     const rows = Object.values(todaysRecord.lookup);
 
-    const today = rows.find(({ term_desc }) => term_desc === latestTerm).days;
+    const row = rows.find(({ term_desc }) => term_desc === latestTerm);
+
+    const today = row.days;
+
+    const todaysDate = row.date.replace("-", "/") + "/" + row.term_desc.split(" ")[1];
 
     const rangeOfDays = getRangeOfDays(today);
 
@@ -217,37 +239,35 @@ const gatherConfidenceIntervals = ({ todaysRecord, latestTerm }) => {
 
     const days = initializeArrayFrom1ToN(rangeOfDays);
 
-    const confidenceIntervals = confidenceIntervalRanges.map(({ percent, high, low }) => {
-      return {
-        data: days.map((daysElapsed) => ({
-          amount: {
-            predicted: enrollment + daysElapsed * average,
-            max: enrollment + daysElapsed * high,
-            min: enrollment + daysElapsed * low,
-          },
-          day: `${daysElapsed + Number(day)}`,
-        })),
-        percent,
-      };
+    const object = {};
+
+    days.forEach((daysElapsed) => {
+      const moment = `${daysElapsed + Number(day)}`;
+
+      const start = new Date(todaysDate);
+
+      start.setDate(start.getDate() + daysElapsed);
+
+      const dateString = start.toLocaleDateString(undefined, {
+        month: "2-digit",
+        year: "numeric",
+        day: "2-digit",
+      });
+
+      const date = dateString.split("/")[0] + "-" + dateString.split("/")[1];
+
+      const point = { [term]: enrollment + daysElapsed * average, predicted: [term] };
+
+      const areas = Object.fromEntries(
+        confidenceIntervalRanges.map(({ percent, high, low }) => {
+          return [percent, [enrollment + daysElapsed * low, enrollment + daysElapsed * high]];
+        }),
+      );
+
+      object[moment] = { days: moment, date, ...point, ...areas };
     });
 
-    const gathered = {
-      enrollment: {
-        priorYears: past.map(({ enrollmentDifference, finalEnrollment, dailyAccrual, enrollment, term, day }) => ({
-          amount: { difference: enrollmentDifference, final: finalEnrollment, current: enrollment, dailyAccrual },
-          term,
-          day,
-        })),
-        thisYear: {
-          amount: { future: { confidenceIntervals, rangeOfDays }, current: enrollment },
-          term,
-          day,
-        },
-        dailyAccrual: { standardDeviation, average },
-      },
-    };
-
-    return gathered;
+    return object;
   }
 };
 

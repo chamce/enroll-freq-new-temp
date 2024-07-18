@@ -18,7 +18,7 @@ export const handleDataUpdated = (data) => {
     });
 
     lines = [...lines].sort();
-    lines = lines.map((dataKey, index) => ({ stroke: randomColors[index], dataKey }));
+    lines = lines.map((dataKey, index) => ({ stroke: randomColors[lines.length - 1 - index], dataKey }));
     lineDataKeySet = new Set(lines.map((line) => line.dataKey));
     dropdownKeys.forEach((key) => (arrays[key] = [...dropdowns[key]].sort()));
   }
