@@ -1,25 +1,26 @@
 import { useDeferredValue, useState, useMemo } from "react";
+import { AgGridReact } from "ag-grid-react";
 import { csv } from "d3";
 
 import { initializeArrayFrom1ToN } from "../helpers/initializeArrayFrom1ToN";
 import { getStandardDeviation } from "../helpers/getStandardDeviation";
+import { useResettableState } from "../hooks/useResettableState";
 import { handleDataUpdated } from "../helpers/handleDataUpdated";
 import { getReferenceLines } from "../helpers/getReferenceLines";
-import { useResettableState } from "../hooks/useResettableState";
 import { SingleSelectDropdown } from "./SingleSelectDropdown";
 import { getFilteredData } from "../helpers/getFilteredData";
 import { usePreviousState } from "../hooks/usePreviousState";
 import { getRangeOfDays } from "../helpers/getRangeOfDays";
 import { getChartData } from "../helpers/getChartData";
 import { flattenData } from "../helpers/flattenData";
-import { getAverage } from "../helpers/getAverage";
 import { getYDomain } from "../helpers/getYDomain";
-import { formatKey } from "../helpers/formatKey";
+import { getAverage } from "../helpers/getAverage";
 import { usePromise } from "../hooks/usePromise";
+import { formatKey } from "../helpers/formatKey";
 import { MyLineChart } from "./MyLineChart";
 import { constants } from "../constants";
-import { Checkbox } from "./Checkbox";
 import { Dropdown } from "./Dropdown";
+import { Checkbox } from "./Checkbox";
 
 const { yAxisOptions, groupByKey, yAxisLabel, xAxisKeys, dateKeys, url } = constants;
 
@@ -109,6 +110,60 @@ export const Dashboard = () => {
     return finals;
   }, [allData]);
 
+  const rowData = useMemo(() => allData.map(({ lookup, ...rest }) => ({ ...rest })), [allData]);
+
+  const colDefs = useMemo(() => {
+    // const rankField = (field) => {
+    //   if (field === "days") return 0;
+
+    //   if (field === "date") return 0;
+
+    //   return Number(field.split(" ")[1]);
+    // };
+
+    // const fields = [...set].sort((a, b) => rankField(a) - rankField(b));
+
+    const valueFormatter = ({ value }) => value?.toLocaleString();
+
+    const colorCellBgGreen = (params) => {
+      const {
+        colDef: { field },
+        rowIndex,
+        value,
+      } = params;
+
+      if (rowIndex > 0) {
+        return value > rowData[rowIndex - 1][field];
+      }
+    };
+
+    const colorCellBgRed = (params) => {
+      const {
+        colDef: { field },
+        rowIndex,
+        value,
+      } = params;
+
+      if (rowIndex > 0) {
+        return value < rowData[rowIndex - 1][field];
+      }
+    };
+
+    const cellClassRules = {
+      "bg-success-subtle": colorCellBgGreen,
+      "bg-danger-subtle": colorCellBgRed,
+    };
+
+    return [
+      { field: xAxisSelection, valueFormatter, flex: 1 },
+      ...[...semestersDescending].reverse().map((field) => ({ cellClassRules, valueFormatter, flex: 2, field })),
+    ];
+  }, [xAxisSelection, semestersDescending]);
+
+  console.log("Row data", rowData);
+
+  console.log("Column defs", colDefs);
+
   return (
     <div className="vstack gap-4">
       <h1 className="text-center">
@@ -177,6 +232,9 @@ export const Dashboard = () => {
         data={allData}
         lines={lines}
       ></MyLineChart>
+      <div className="ag-theme-quartz" style={{ height: 500 }}>
+        <AgGridReact columnDefs={colDefs} rowData={rowData} />
+      </div>
     </div>
   );
 };
