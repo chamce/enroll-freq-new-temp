@@ -30,10 +30,22 @@ export const Dashboard = () => {
   const data = usePromise(promise);
   const [zoomOn, setZoomOn] = useState(true);
   const [tooltipOn, setTooltipOn] = useState(true);
-  const [predictOn, setPredictOn] = useState(true);
+  const [predictOn, setPredictOn] = useState(false);
   const [xAxisSelection, setXAxisSelection] = useState(xAxisKeys[0]);
   const [yAxisSelection, setYAxisSelection] = useState(yAxisOptions[0]);
   const [brushIndexes, setBrushIndexes] = useState({ startIndex: 0, endIndex: 1 });
+
+  usePreviousState(yAxisSelection, () => {
+    if (yAxisSelection === "melt") {
+      setXAxisSelection("days");
+    }
+  });
+
+  usePreviousState(xAxisSelection, () => {
+    if (xAxisSelection === "date" && yAxisSelection === "melt") {
+      setYAxisSelection("each_day");
+    }
+  });
 
   const deferredZoomOn = useDeferredValue(zoomOn);
   const deferredTooltipOn = useDeferredValue(tooltipOn);
@@ -55,9 +67,18 @@ export const Dashboard = () => {
 
   const flattenedData = useMemo(
     () =>
-      flattenData(dateKeys.includes(deferredXAxisSelection), deferredXAxisSelection, deferredYAxisSelection, chartData),
+      flattenData(
+        dateKeys.includes(deferredXAxisSelection),
+        deferredXAxisSelection,
+        deferredYAxisSelection === "melt" ? "daily_change" : deferredYAxisSelection,
+        chartData,
+      ),
     [deferredXAxisSelection, deferredYAxisSelection, chartData],
   );
+
+  console.log(deferredYAxisSelection);
+
+  console.log(flattenedData);
 
   const semestersDescending = [...lineDataKeySet].sort(
     (semesterA, semesterB) => Number(semesterB.split(" ")[1]) - Number(semesterA.split(" ")[1]),
@@ -110,9 +131,36 @@ export const Dashboard = () => {
     return finals;
   }, [allData]);
 
-  const rowData = useMemo(() => allData.map(({ lookup, ...rest }) => ({ ...rest })), [allData]);
+  const meltData = useMemo(() => {
+    const melt = [];
+
+    const fromZero = allData.filter(({ days }) => Number(days) >= 0);
+
+    fromZero.forEach(({ lookup, days, ...rest }, index) => {
+      const termValues = Object.fromEntries(
+        Object.entries(rest).map(([key, value]) => [key, index === 0 ? 0 : value + melt[index - 1][key]]),
+      );
+
+      melt.push({ lookup, days, ...termValues });
+    });
+
+    return melt;
+  }, [allData]);
+
+  const fields = useMemo(
+    () => new Set([deferredXAxisSelection, ...[...semestersDescending].reverse()]),
+    [deferredXAxisSelection, semestersDescending],
+  );
+
+  const rowData = useMemo(
+    () => meltData.map((object) => Object.fromEntries(Object.entries(object).filter(([field]) => fields.has(field)))),
+    [meltData, fields],
+  );
+
+  const shouldMelt = deferredXAxisSelection === "days" && deferredYAxisSelection === "melt";
 
   const colDefs = useMemo(() => {
+    if (!shouldMelt) return [];
     // const rankField = (field) => {
     //   if (field === "days") return 0;
 
@@ -154,15 +202,10 @@ export const Dashboard = () => {
       "bg-danger-subtle": colorCellBgRed,
     };
 
-    return [
-      { field: xAxisSelection, valueFormatter, flex: 1 },
-      ...[...semestersDescending].reverse().map((field) => ({ cellClassRules, valueFormatter, flex: 2, field })),
-    ];
-  }, [xAxisSelection, semestersDescending]);
-
-  console.log("Row data", rowData);
-
-  console.log("Column defs", colDefs);
+    return [...fields].map((field, index) =>
+      index === 0 ? { valueFormatter, flex: 1, field } : { cellClassRules, valueFormatter, flex: 2, field },
+    );
+  }, [rowData, fields, shouldMelt]);
 
   return (
     <div className="vstack gap-4">
@@ -207,7 +250,7 @@ export const Dashboard = () => {
             Zoom
           </button>
         </div>
-        <div className="col">
+        {/* <div className="col">
           <button
             className="btn btn-light btn-solid icon-link d-flex justify-content-center align-items-center w-100"
             onClick={() => setPredictOn((condition) => !condition)}
@@ -219,22 +262,24 @@ export const Dashboard = () => {
             <Checkbox active={predictOn}></Checkbox>
             Predict
           </button>
-        </div>
+        </div> */}
       </div>
       <MyLineChart
+        referenceLines={shouldMelt ? [] : referenceLines}
         yMinMax={deferredZoomOn ? yMinMax : [0, "auto"]}
         xAxisSelection={deferredXAxisSelection}
         yAxisSelection={deferredYAxisSelection}
+        data={shouldMelt ? meltData : allData}
         predictionFinals={predictionFinals}
         setBrushIndexes={setBrushIndexes}
-        referenceLines={referenceLines}
         tooltipOn={deferredTooltipOn}
-        data={allData}
         lines={lines}
       ></MyLineChart>
-      <div className="ag-theme-quartz" style={{ height: 500 }}>
-        <AgGridReact columnDefs={colDefs} rowData={rowData} />
-      </div>
+      {shouldMelt && (
+        <div className="ag-theme-quartz" style={{ height: 500 }}>
+          <AgGridReact columnDefs={colDefs} rowData={rowData} />
+        </div>
+      )}
     </div>
   );
 };
