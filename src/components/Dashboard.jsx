@@ -1,4 +1,4 @@
-import { useDeferredValue, useState, useMemo } from "react";
+import { useDeferredValue, useCallback, useState, useMemo, useRef } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { csv } from "d3";
 
@@ -26,6 +26,10 @@ const { yAxisOptions, groupByKey, yAxisLabel, xAxisKeys, dateKeys, url } = const
 
 const promise = csv(url);
 
+// add domain function (ticks divided evenly)
+// download table
+// condense table & shrink text
+
 export const Dashboard = () => {
   const data = usePromise(promise);
   const [zoomOn, setZoomOn] = useState(true);
@@ -34,6 +38,12 @@ export const Dashboard = () => {
   const [xAxisSelection, setXAxisSelection] = useState(xAxisKeys[0]);
   const [yAxisSelection, setYAxisSelection] = useState(yAxisOptions[0]);
   const [brushIndexes, setBrushIndexes] = useState({ startIndex: 0, endIndex: 1 });
+
+  const gridRef = useRef();
+
+  const onBtnExport = useCallback(() => {
+    gridRef.current.api.exportDataAsCsv();
+  }, []);
 
   usePreviousState(yAxisSelection, () => {
     if (yAxisSelection === "melt") {
@@ -75,10 +85,6 @@ export const Dashboard = () => {
       ),
     [deferredXAxisSelection, deferredYAxisSelection, chartData],
   );
-
-  console.log(deferredYAxisSelection);
-
-  console.log(flattenedData);
 
   const semestersDescending = [...lineDataKeySet].sort(
     (semesterA, semesterB) => Number(semesterB.split(" ")[1]) - Number(semesterA.split(" ")[1]),
@@ -131,21 +137,11 @@ export const Dashboard = () => {
     return finals;
   }, [allData]);
 
-  const meltData = useMemo(() => {
-    const melt = [];
+  const meltFrom = brushIndexes.startIndex;
 
-    const fromZero = allData.filter(({ days }) => Number(days) >= 0);
+  const chartMelt = useMemo(() => meltFn(allData), [allData]);
 
-    fromZero.forEach(({ lookup, days, ...rest }, index) => {
-      const termValues = Object.fromEntries(
-        Object.entries(rest).map(([key, value]) => [key, index === 0 ? 0 : value + melt[index - 1][key]]),
-      );
-
-      melt.push({ lookup, days, ...termValues });
-    });
-
-    return melt;
-  }, [allData]);
+  const tableMelt = useMemo(() => meltFn(allData, meltFrom), [allData, meltFrom]);
 
   const fields = useMemo(
     () => new Set([deferredXAxisSelection, ...[...semestersDescending].reverse()]),
@@ -153,8 +149,8 @@ export const Dashboard = () => {
   );
 
   const rowData = useMemo(
-    () => meltData.map((object) => Object.fromEntries(Object.entries(object).filter(([field]) => fields.has(field)))),
-    [meltData, fields],
+    () => tableMelt.map((object) => Object.fromEntries(Object.entries(object).filter(([field]) => fields.has(field)))),
+    [tableMelt, fields],
   );
 
   const shouldMelt = deferredXAxisSelection === "days" && deferredYAxisSelection === "melt";
@@ -181,7 +177,7 @@ export const Dashboard = () => {
       } = params;
 
       if (rowIndex > 0) {
-        return value > rowData[rowIndex - 1][field];
+        return rowData[rowIndex - 1] && value > rowData[rowIndex - 1][field];
       }
     };
 
@@ -193,7 +189,7 @@ export const Dashboard = () => {
       } = params;
 
       if (rowIndex > 0) {
-        return value < rowData[rowIndex - 1][field];
+        return rowData[rowIndex - 1] && value < rowData[rowIndex - 1][field];
       }
     };
 
@@ -203,7 +199,9 @@ export const Dashboard = () => {
     };
 
     return [...fields].map((field, index) =>
-      index === 0 ? { valueFormatter, flex: 1, field } : { cellClassRules, valueFormatter, flex: 2, field },
+      index === 0
+        ? { valueFormatter, flex: 1, field }
+        : { type: "numericColumn", valueFormatter, cellClassRules, flex: 2, field },
     );
   }, [rowData, fields, shouldMelt]);
 
@@ -237,7 +235,7 @@ export const Dashboard = () => {
             Tooltip
           </button>
         </div>
-        <div className="col">
+        {/* <div className="col">
           <button
             className="btn btn-light btn-solid icon-link d-flex justify-content-center align-items-center w-100"
             onClick={() => setZoomOn((condition) => !condition)}
@@ -249,7 +247,7 @@ export const Dashboard = () => {
             <Checkbox active={zoomOn}></Checkbox>
             Zoom
           </button>
-        </div>
+        </div> */}
         {/* <div className="col">
           <button
             className="btn btn-light btn-solid icon-link d-flex justify-content-center align-items-center w-100"
@@ -266,18 +264,26 @@ export const Dashboard = () => {
       </div>
       <MyLineChart
         referenceLines={shouldMelt ? [] : referenceLines}
-        yMinMax={deferredZoomOn ? yMinMax : [0, "auto"]}
-        xAxisSelection={deferredXAxisSelection}
+        data={shouldMelt ? chartMelt : allData}
         yAxisSelection={deferredYAxisSelection}
-        data={shouldMelt ? meltData : allData}
+        xAxisSelection={deferredXAxisSelection}
         predictionFinals={predictionFinals}
         setBrushIndexes={setBrushIndexes}
+        yMinMax={["dataMin", "auto"]}
         tooltipOn={deferredTooltipOn}
         lines={lines}
       ></MyLineChart>
+      <div></div>
       {shouldMelt && (
-        <div className="ag-theme-quartz" style={{ height: 500 }}>
-          <AgGridReact columnDefs={colDefs} rowData={rowData} />
+        <div>
+          <button className="btn btn-success" onClick={onBtnExport} type="button">
+            Download CSV export file
+          </button>
+        </div>
+      )}
+      {shouldMelt && (
+        <div className="ag-theme-balham" style={{ height: 500 }}>
+          <AgGridReact columnDefs={colDefs} rowData={rowData} ref={gridRef} />
         </div>
       )}
     </div>
@@ -285,6 +291,22 @@ export const Dashboard = () => {
 };
 
 const zScoreTable = { 99: 2.576, 90: 1.645, 95: 1.96 };
+
+const meltFn = (data, start = 0) => {
+  const melt = [];
+
+  const fromHere = data.filter(({ days }) => Number(days) >= start);
+
+  fromHere.forEach(({ lookup, days, ...rest }, index) => {
+    const termValues = Object.fromEntries(
+      Object.entries(rest).map(([key, value]) => [key, index === 0 ? 0 : value + melt[index - 1][key]]),
+    );
+
+    melt.push({ lookup, days, ...termValues });
+  });
+
+  return melt;
+};
 
 const gatherConfidenceIntervals = ({ xAxisSelection, todaysRecord, latestTerm }) => {
   if (todaysRecord) {

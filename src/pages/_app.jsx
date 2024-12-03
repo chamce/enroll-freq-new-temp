@@ -6,7 +6,7 @@ import { Dashboard } from "../components/Dashboard";
 import "../styles/App.css";
 
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the Data Grid
-import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the Data Grid
+import "ag-grid-community/styles/ag-theme-balham.css"; // Optional Theme applied to the Data Grid
 
 const App = ({ routes }) => {
   // const [count, setCount] = useState(0);
