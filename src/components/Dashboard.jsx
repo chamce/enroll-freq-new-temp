@@ -220,7 +220,7 @@ export const Dashboard = () => {
               type="button"
             >
               <Checkbox active={meltFromZero}></Checkbox>
-              Melt from zero
+              Melt from day 0
             </button>
           </div>
         )}

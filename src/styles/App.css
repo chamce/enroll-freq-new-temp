@@ -1,3 +1,7 @@
 .recharts-surface {
   overflow: visible;
 }
+
+.recharts-cartesian-axis-tick-value {
+  font-size: small;
+}
