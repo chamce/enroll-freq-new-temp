@@ -21,10 +21,13 @@ export const MyLineChart = memo(
   ({
     predictionFinals,
     setBrushIndexes,
-    referenceLines,
-    yAxisSelection,
     xAxisSelection,
+    yAxisSelection,
+    referenceLines,
+    brushStart,
     tooltipOn,
+    brushEnd,
+    melting,
     yMinMax,
     lines,
     data,
@@ -121,10 +124,11 @@ export const MyLineChart = memo(
             content={
               <CustomizedTooltip
                 predictionFinals={predictionFinals}
-                xAxisSelection={xAxisSelection}
                 yAxisSelection={yAxisSelection}
+                xAxisSelection={xAxisSelection}
                 tooltipOn={tooltipOn}
                 isActive={isActive}
+                melting={melting}
               />
             }
           />
@@ -160,6 +164,8 @@ export const MyLineChart = memo(
           <Brush
             onChange={(object) => setBrushIndexes(object)}
             dataKey={xAxisSelection}
+            startIndex={brushStart}
+            endIndex={brushEnd}
             stroke="#8884d8"
             height={30}
           ></Brush>

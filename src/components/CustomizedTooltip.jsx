@@ -6,7 +6,7 @@ import { constants } from "../constants";
 const { yAxisOptions, groupByKey, yAxisLabel, xAxisKeys, totalKeys } = constants;
 
 export const CustomizedTooltip = (props) => {
-  const { predictionFinals, xAxisSelection, yAxisSelection, tooltipOn, payload } = props;
+  const { predictionFinals, xAxisSelection, yAxisSelection, tooltipOn, payload, melting } = props;
 
   const otherXOptions = xAxisKeys.filter((key) => key !== xAxisSelection);
 
@@ -32,6 +32,11 @@ export const CustomizedTooltip = (props) => {
               <th className="text-end" scope="col">
                 {formatKey(yAxisLabel)}
               </th>
+              {melting && (
+                <th className="text-end" scope="col">
+                  Melt
+                </th>
+              )}
               <th className="text-end" scope="col">
                 {formatKey(totalKeys[1])}
               </th>
@@ -43,6 +48,8 @@ export const CustomizedTooltip = (props) => {
 
               const dataRow = objectPayload.lookup[dataKey];
 
+              const freqEachDay = dataRow._FREQ__each_day;
+
               const roundedValue = Math.round(value);
 
               const isPredicted = "predicted" in objectPayload && objectPayload.predicted.includes(dataKey);
@@ -52,6 +59,13 @@ export const CustomizedTooltip = (props) => {
               const final = !dataRow ? officialPrediction : dataRow[totalKeys[1] + "_" + yAxisOptions[0]];
 
               const roundedFinal = Math.round(final);
+
+              const enrollment =
+                yAxisSelection === yAxisOptions[1]
+                  ? getSign(roundedValue) + formatNumber(roundedValue)
+                  : formatNumber(roundedValue);
+
+              const enrollmentContent = melting ? formatNumber(Math.round(freqEachDay)) : enrollment;
 
               return (
                 <tr className={isPredicted ? "table-warning" : ""} key={i}>
@@ -70,10 +84,9 @@ export const CustomizedTooltip = (props) => {
                     }
                     className={`text-end`}
                   >
-                    {yAxisSelection === yAxisOptions[1]
-                      ? getSign(roundedValue) + formatNumber(roundedValue)
-                      : formatNumber(roundedValue)}
+                    {enrollmentContent}
                   </td>
+                  {melting && <td className={`text-end`}>{formatNumber(roundedValue)}</td>}
                   <td className={`text-end`}>{roundedFinal === 0 ? "..." : formatNumber(roundedFinal)}</td>
                 </tr>
               );
