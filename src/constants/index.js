@@ -17,7 +17,7 @@ export const constants = {
   xAxisKeys: ["days", "date"],
   yAxisLabel: "enrollment",
   groupByKey: "term_desc",
-  url: "data/data.csv",
+  url: "Data/data.csv",
   dateKeys: ["date"],
   yAxisKey: "_FREQ_",
 };

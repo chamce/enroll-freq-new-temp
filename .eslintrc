@@ -1,5 +1,5 @@
 {
-  "extends": ["plugin:perfectionist/recommended-line-length", "react-app", "prettier"],
+  "extends": ["react-app", "prettier"],
   "plugins": ["prettier"],
   "rules": {
     "prettier/prettier": [

@@ -17,6 +17,7 @@ import { meltFn } from "../helpers/meltFn";
 import { constants } from "../constants";
 import { Dropdown } from "./Dropdown";
 import { Checkbox } from "./Checkbox";
+import Wrapper from "../container/Wrapper";
 
 const { yAxisOptions, groupByKey, yAxisLabel, xAxisKeys, dateKeys, url } = constants;
 
@@ -180,10 +181,10 @@ export const Dashboard = () => {
   const onPointerUpCapture = () => setBrushing(false);
 
   return (
-    <div onPointerUpCapture={onPointerUpCapture} className="vstack gap-4">
-      <h1 className="text-center">
-        {formatKey(yAxisLabel)} by {formatKey(deferredXAxisSelection)} & {formatKey(groupByKey)}
-      </h1>
+    <Wrapper
+      heading={`${formatKey(yAxisLabel)} by ${formatKey(deferredXAxisSelection)} & ${formatKey(groupByKey)}`}
+      onPointerUpCapture={onPointerUpCapture}
+    >
       <div className="hstack flex-wrap gap-3 text-nowrap">
         {Object.keys(dropdowns).map((key) => (
           <Dropdown values={dropdownArrays[key]} setState={setDropdowns} state={dropdowns[key]} dataKey={key} key={key}>
@@ -253,6 +254,6 @@ export const Dashboard = () => {
           <AgGridReact columnDefs={colDefs} rowData={rowData} ref={gridRef} />
         </div>
       )}
-    </div>
+    </Wrapper>
   );
 };
