@@ -23,6 +23,21 @@ const { yAxisOptions, groupByKey, yAxisLabel, xAxisKeys, dateKeys, url } = const
 
 const promise = csv(url);
 
+const Predict = window.PredictDayToDay;
+
+// console.log(Predict);
+
+// let dat = [
+//   { term: "F22", days_out: -64, value: 9390, final: 14324 },
+//   { term: "F23", days_out: -64, value: 10571, final: 15008 },
+//   { term: "F24", days_out: -64, value: 11717, final: 15673 },
+//   { term: "F25", days_out: -64, value: 11952, final: 15969 },
+//   { term: "F26", days_out: -64, value: 11905, final: null },
+// ];
+
+//  const dp = new Predict(dat, (stdev = 3), (weigh_recent = false));
+// console.log("dp.final=", dp.final);
+
 export const Dashboard = () => {
   const data = usePromise(promise);
   const [tooltipOn, setTooltipOn] = useState(true);
@@ -169,7 +184,6 @@ export const Dashboard = () => {
   }, [rowData, fields, shouldMelt]);
 
   const onPointerDownCapture = (e) => {
-    console.log(e.target);
     if (
       [...e.target.parentElement.classList].includes("recharts-brush-traveller") ||
       [...e.target.classList].includes("recharts-brush-slide")
@@ -179,6 +193,23 @@ export const Dashboard = () => {
   };
 
   const onPointerUpCapture = () => setBrushing(false);
+
+  const [mouseMoveEvent, setMouseMoveEvent] = useState(null);
+
+  const activePayload =
+    mouseMoveEvent && Array.isArray(mouseMoveEvent.activePayload) ? mouseMoveEvent.activePayload : [];
+
+  const arr = activePayload.map(({ name, payload: { lookup } }) => {
+    const obj = lookup[name];
+
+    const [term, days_out, value, final] = [name, obj?.days, obj?._FREQ__each_day, obj?.Official_each_day];
+
+    return { term, days_out, value, final };
+  });
+
+  const prediction = getPrediction(arr, semestersDescending);
+
+  const onMouseMove = (e) => setMouseMoveEvent(e);
 
   return (
     <Wrapper
@@ -228,6 +259,7 @@ export const Dashboard = () => {
       </div>
       <div onPointerDownCapture={onPointerDownCapture}>
         <MyLineChart
+          onMouseMove={onMouseMove}
           brushStart={shouldMelt ? brushIndexes.startIndex : undefined}
           brushEnd={shouldMelt ? brushIndexes.endIndex : undefined}
           referenceLines={shouldMelt ? [] : referenceLines}
@@ -239,6 +271,7 @@ export const Dashboard = () => {
           melting={shouldMelt}
           data={lockedData}
           lines={lines}
+          prediction={prediction && !isNaN(prediction.final.value) ? prediction.final : {}}
         ></MyLineChart>
       </div>
       <div></div>
@@ -256,4 +289,22 @@ export const Dashboard = () => {
       )}
     </Wrapper>
   );
+};
+
+const getPrediction = (arr, semestersDescending) => {
+  if (arr.length > 0) {
+    const last = arr[arr.length - 1];
+
+    if (last.term === semestersDescending[0]) {
+      const newArr = arr.map((el) => {
+        if (el === last) {
+          return { ...last, final: null };
+        }
+
+        return el;
+      });
+
+      return new Predict(newArr);
+    }
+  }
 };

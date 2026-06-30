@@ -17,9 +17,15 @@ import { formatNumber } from "../helpers/formatNumber";
 import { formatKey } from "../helpers/formatKey";
 import { constants } from "../constants";
 
+// way to freeze reference lines shown at last day of 2026 data
+// show labels at left end of reference lines
+// style reference lines and add more descriptive labels
+// checkbox to weight the model based on the most recent data (set weigh_recent to true) (explain what that means)
+// !!! on m&c page, if we remove student college and student department, then we can just use program college
+
 export const MyLineChart = memo(
   ({
-    predictionFinals,
+    prediction,
     setBrushIndexes,
     xAxisSelection,
     yAxisSelection,
@@ -31,6 +37,7 @@ export const MyLineChart = memo(
     yMinMax,
     lines,
     data,
+    onMouseMove,
   }) => {
     const [{ clicked, entered }, setState] = useState({ clicked: null, entered: null });
 
@@ -90,6 +97,7 @@ export const MyLineChart = memo(
     return (
       <ResponsiveContainer height={450}>
         <LineChart
+          onMouseMove={onMouseMove}
           margin={{
             bottom: 0,
             right: 0,
@@ -123,7 +131,6 @@ export const MyLineChart = memo(
           <Tooltip
             content={
               <CustomizedTooltip
-                predictionFinals={predictionFinals}
                 yAxisSelection={yAxisSelection}
                 xAxisSelection={xAxisSelection}
                 tooltipOn={tooltipOn}
@@ -139,6 +146,9 @@ export const MyLineChart = memo(
             onClick={handleClick}
             verticalAlign="top"
           ></Legend>
+          <ReferenceLine label="upper_value" y={prediction.upper_value}></ReferenceLine>
+          <ReferenceLine label="value" y={prediction.value}></ReferenceLine>
+          <ReferenceLine label="lower_value" y={prediction.lower_value}></ReferenceLine>
           {referenceLines.map(([x, stroke], i) => (
             <ReferenceLine
               label={i === 0 ? { value: "First Day of Term", fill: "black" } : null}
@@ -148,7 +158,7 @@ export const MyLineChart = memo(
               x={x}
             ></ReferenceLine>
           ))}
-
+          {/* <Line data={[]}></Line> */}
           {Array.isArray(lines) &&
             lines.map((line) => (
               <Line

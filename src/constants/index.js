@@ -11,7 +11,7 @@ export const constants = {
     "#4bafd0",
     "#c8683f",
   ],
-  dropdownKeys: ["term_desc", "level_desc", "student_type", "online"],
+  dropdownKeys: ["term_desc", "level_desc", "student_type", "online", "learner_age"],
   yAxisOptions: ["each_day", "daily_change", "melt"],
   totalKeys: ["_FREQ_", "Official"],
   xAxisKeys: ["days", "date"],
