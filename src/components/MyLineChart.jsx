@@ -18,12 +18,14 @@ import { formatNumber } from "../helpers/formatNumber";
 import { formatKey } from "../helpers/formatKey";
 import { constants } from "../constants";
 
-// post last day, have prediction based on last day
+// when mouse leaves line chart, set mouse move event to null
 // way to freeze reference lines shown at last day of 2026 data
-// show labels at left end of reference lines
 // style reference lines and add more descriptive labels
 // checkbox to weight the model based on the most recent data (set weigh_recent to true) (explain what that means)
-// !!! on m&c page, if we remove student college and student department, then we can just use program college
+// vertical line to label where forecast starts
+// keep reference line values within the y axis domain (reference line values not in actual chart data)
+// checkbox to toggle forecast
+// how to handle pred value overlapping with y axis tick? (glow pred value)
 
 export const MyLineChart = memo(
   ({
@@ -100,12 +102,6 @@ export const MyLineChart = memo(
 
     const predLine = (Array.isArray(lines) ? lines : []).find(({ dataKey }) => dataKey === predTerm);
 
-    const xValues = data.map(({ [xAxisSelection]: x }) => x);
-
-    const minX = Math.min(...xValues);
-
-    console.log(minX);
-
     return (
       <ResponsiveContainer height={450}>
         <LineChart
@@ -178,7 +174,7 @@ export const MyLineChart = memo(
             // ]}
             strokeOpacity={0}
             y={prediction.upper_value}
-            label={{ value: `${prediction.term} Forecast`, position: "insideBottomRight" }}
+            label={{ value: `${prediction.term} Forecast`, position: "top" }}
           ></ReferenceLine>
           <ReferenceLine
             stroke={predLine && predLine.stroke}

@@ -25,8 +25,6 @@ const promise = csv(url);
 
 const Predict = window.PredictDayToDay;
 
-// console.log(Predict);
-
 // let dat = [
 //   { term: "F22", days_out: -64, value: 9390, final: 14324 },
 //   { term: "F23", days_out: -64, value: 10571, final: 15008 },
@@ -36,7 +34,6 @@ const Predict = window.PredictDayToDay;
 // ];
 
 //  const dp = new Predict(dat, (stdev = 3), (weigh_recent = false));
-// console.log("dp.final=", dp.final);
 
 export const Dashboard = () => {
   const data = usePromise(promise);
@@ -199,17 +196,37 @@ export const Dashboard = () => {
   const activePayload =
     mouseMoveEvent && Array.isArray(mouseMoveEvent.activePayload) ? mouseMoveEvent.activePayload : [];
 
-  const arr = activePayload.map(({ name, payload: { lookup } }) => {
-    const obj = lookup[name];
+  const lookup = activePayload.length > 0 && "payload" in activePayload[0] ? activePayload[0].payload.lookup : {};
 
+  const arr = Object.entries(lookup).map(([name, obj]) => {
     const [term, days_out, value, final] = [name, obj?.days, obj?._FREQ__each_day, obj?.Official_each_day];
 
     return { term, days_out, value, final };
   });
 
-  const prediction = getPrediction(arr, semestersDescending);
+  const daysOut = arr.length > 0 ? arr[0].days_out : null;
+
+  const reversedData = [...lockedData].reverse();
+
+  const lastTerm = semestersDescending[0];
+
+  const lastPoint = reversedData.find((obj) => lastTerm in obj);
+
+  const lastLookup = lastPoint ? lastPoint.lookup : {};
+
+  const lastArr = Object.entries(lastLookup).map(([name, obj]) => {
+    const [term, days_out, value, final] = [name, obj?.days, obj?._FREQ__each_day, obj?.Official_each_day];
+
+    return { term, days_out, value, final };
+  });
+
+  const lastDaysOut = lastArr.length > 0 ? lastArr[0].days_out : null;
+
+  const prediction = getPrediction(Number(daysOut) > Number(lastDaysOut) ? lastArr : arr, semestersDescending);
 
   const onMouseMove = (e) => setMouseMoveEvent(e);
+
+  console.log(mouseMoveEvent);
 
   return (
     <Wrapper
