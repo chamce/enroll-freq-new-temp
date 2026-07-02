@@ -9,6 +9,7 @@ import {
   YAxis,
   XAxis,
   Line,
+  ReferenceArea,
 } from "recharts";
 import { useState, memo } from "react";
 
@@ -17,6 +18,7 @@ import { formatNumber } from "../helpers/formatNumber";
 import { formatKey } from "../helpers/formatKey";
 import { constants } from "../constants";
 
+// post last day, have prediction based on last day
 // way to freeze reference lines shown at last day of 2026 data
 // show labels at left end of reference lines
 // style reference lines and add more descriptive labels
@@ -94,6 +96,16 @@ export const MyLineChart = memo(
       );
     };
 
+    const predTerm = prediction.term;
+
+    const predLine = (Array.isArray(lines) ? lines : []).find(({ dataKey }) => dataKey === predTerm);
+
+    const xValues = data.map(({ [xAxisSelection]: x }) => x);
+
+    const minX = Math.min(...xValues);
+
+    console.log(minX);
+
     return (
       <ResponsiveContainer height={450}>
         <LineChart
@@ -146,9 +158,39 @@ export const MyLineChart = memo(
             onClick={handleClick}
             verticalAlign="top"
           ></Legend>
-          <ReferenceLine label="upper_value" y={prediction.upper_value}></ReferenceLine>
-          <ReferenceLine label="value" y={prediction.value}></ReferenceLine>
-          <ReferenceLine label="lower_value" y={prediction.lower_value}></ReferenceLine>
+          <ReferenceArea
+            // fill={predLine && predLine.stroke}
+            y1={prediction.lower_value}
+            y2={prediction.upper_value}
+          ></ReferenceArea>
+          <ReferenceLine
+            // segment={[
+            //   { x: 0, y: prediction.upper_value },
+            //   { x: 2, y: prediction.upper_value },
+            // ]}
+            y={prediction.upper_value}
+            label={{ value: prediction.upper_value, position: "insideBottomLeft" }}
+          ></ReferenceLine>
+          <ReferenceLine
+            // segment={[
+            //   { x: 0, y: prediction.upper_value },
+            //   { x: 2, y: prediction.upper_value },
+            // ]}
+            strokeOpacity={0}
+            y={prediction.upper_value}
+            label={{ value: `${prediction.term} Forecast`, position: "insideBottomRight" }}
+          ></ReferenceLine>
+          <ReferenceLine
+            stroke={predLine && predLine.stroke}
+            y={prediction.value}
+            label={{ value: prediction.value, position: "left" }}
+          ></ReferenceLine>
+          <ReferenceLine
+            // stroke={predLine && predLine.stroke}
+            // strokeOpacity={0}
+            y={prediction.lower_value}
+            label={{ value: prediction.lower_value, position: "insideTopLeft" }}
+          ></ReferenceLine>
           {referenceLines.map(([x, stroke], i) => (
             <ReferenceLine
               label={i === 0 ? { value: "First Day of Term", fill: "black" } : null}
