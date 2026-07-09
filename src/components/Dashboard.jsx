@@ -38,6 +38,9 @@ const Predict = window.PredictDayToDay;
 export const Dashboard = () => {
   const data = usePromise(promise);
   const [tooltipOn, setTooltipOn] = useState(true);
+  const [forecastOn, setForecastOn] = useState(true);
+  const [weighRecent, setWeighRecent] = useState(false);
+  const [freezePrediction, setFreezePrediction] = useState(true);
   const [meltFromZero, setMeltFromZero] = useState(true);
   const [xAxisSelection, setXAxisSelection] = useState(xAxisKeys[0]);
   const [yAxisSelection, setYAxisSelection] = useState(yAxisOptions[0]);
@@ -222,7 +225,21 @@ export const Dashboard = () => {
 
   const lastDaysOut = lastArr.length > 0 ? lastArr[0].days_out : null;
 
-  const prediction = getPrediction(Number(daysOut) > Number(lastDaysOut) ? lastArr : arr, semestersDescending);
+  const isForecastOn = () => {
+    if (freezePrediction) {
+      return true;
+    }
+
+    return forecastOn && mouseMoveEvent !== null;
+  };
+
+  const prediction = !isForecastOn()
+    ? null
+    : getPrediction(
+        Number(daysOut) > Number(lastDaysOut) || freezePrediction ? lastArr : arr,
+        semestersDescending,
+        !weighRecent,
+      );
 
   const onMouseMove = (e) => setMouseMoveEvent(e);
 
@@ -256,6 +273,45 @@ export const Dashboard = () => {
           >
             <Checkbox active={tooltipOn}></Checkbox>
             Tooltip
+          </button>
+        </div>
+        <div className="col">
+          <button
+            className="btn btn-light btn-solid icon-link d-flex justify-content-center align-items-center w-100"
+            onClick={() => setForecastOn((condition) => !condition)}
+            data-bs-auto-close="outside"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            type="button"
+          >
+            <Checkbox active={forecastOn}></Checkbox>
+            Forecast
+          </button>
+        </div>
+        <div className="col">
+          <button
+            className="btn btn-light btn-solid icon-link d-flex justify-content-center align-items-center w-100"
+            onClick={() => setFreezePrediction((condition) => !condition)}
+            data-bs-auto-close="outside"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            type="button"
+          >
+            <Checkbox active={freezePrediction}></Checkbox>
+            Freeze forecast
+          </button>
+        </div>
+        <div className="col">
+          <button
+            className="btn btn-light btn-solid icon-link d-flex justify-content-center align-items-center w-100"
+            onClick={() => setWeighRecent((condition) => !condition)}
+            data-bs-auto-close="outside"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            type="button"
+          >
+            <Checkbox active={weighRecent}></Checkbox>
+            Weigh recent
           </button>
         </div>
         {shouldMelt && (
@@ -308,7 +364,7 @@ export const Dashboard = () => {
   );
 };
 
-const getPrediction = (arr, semestersDescending) => {
+const getPrediction = (arr, semestersDescending, weighRecent) => {
   if (arr.length > 0) {
     const last = arr[arr.length - 1];
 
@@ -321,7 +377,7 @@ const getPrediction = (arr, semestersDescending) => {
         return el;
       });
 
-      return new Predict(newArr);
+      return new Predict(newArr, 3, weighRecent);
     }
   }
 };

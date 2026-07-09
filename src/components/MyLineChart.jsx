@@ -18,14 +18,15 @@ import { formatNumber } from "../helpers/formatNumber";
 import { formatKey } from "../helpers/formatKey";
 import { constants } from "../constants";
 
-// when mouse leaves line chart, set mouse move event to null
-// way to freeze reference lines shown at last day of 2026 data
-// style reference lines and add more descriptive labels
-// checkbox to weight the model based on the most recent data (set weigh_recent to true) (explain what that means)
-// vertical line to label where forecast starts
+// * checkbox to toggle forecast
+// * way to freeze reference lines shown at last day of 2026 data
+// * style reference lines and add more descriptive labels
+// * checkbox to weight the model based on the most recent data (set weigh_recent to true) (explain what that means)
+// * vertical line to label where forecast starts
+// / how to handle pred value overlapping with y axis tick? (glow pred value)
+// / when mouse leaves line chart, set mouse move event to null
 // keep reference line values within the y axis domain (reference line values not in actual chart data)
-// checkbox to toggle forecast
-// how to handle pred value overlapping with y axis tick? (glow pred value)
+// have explanations for additional checkboxes & maybe make vertical reference line labels horizontal (default)
 
 export const MyLineChart = memo(
   ({
@@ -102,10 +103,13 @@ export const MyLineChart = memo(
 
     const predLine = (Array.isArray(lines) ? lines : []).find(({ dataKey }) => dataKey === predTerm);
 
+    // console.log(referenceLines);
+
     return (
       <ResponsiveContainer height={450}>
         <LineChart
           onMouseMove={onMouseMove}
+          onMouseLeave={() => onMouseMove(null)}
           margin={{
             bottom: 0,
             right: 0,
@@ -174,12 +178,19 @@ export const MyLineChart = memo(
             // ]}
             strokeOpacity={0}
             y={prediction.upper_value}
-            label={{ value: `${prediction.term} Forecast`, position: "top" }}
+            label={{
+              value: `${prediction.term} Forecast`,
+              position: "top",
+            }}
           ></ReferenceLine>
           <ReferenceLine
             stroke={predLine && predLine.stroke}
             y={prediction.value}
-            label={{ value: prediction.value, position: "left" }}
+            label={{
+              value: prediction.value,
+              position: "left",
+              style: { filter: "drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5))" },
+            }}
           ></ReferenceLine>
           <ReferenceLine
             // stroke={predLine && predLine.stroke}
@@ -187,9 +198,31 @@ export const MyLineChart = memo(
             y={prediction.lower_value}
             label={{ value: prediction.lower_value, position: "insideTopLeft" }}
           ></ReferenceLine>
+          <ReferenceLine
+            label={{
+              value: "First Day of Forecast",
+              fill: "black",
+              angle: -90,
+              style: { textAnchor: "middle" },
+              position: "left",
+            }}
+            strokeOpacity={1}
+            stroke="#212529"
+            x="-100"
+          ></ReferenceLine>
           {referenceLines.map(([x, stroke], i) => (
             <ReferenceLine
-              label={i === 0 ? { value: "First Day of Term", fill: "black" } : null}
+              label={
+                i === 0
+                  ? {
+                      value: "First Day of Term",
+                      fill: "black",
+                      angle: -90,
+                      style: { textAnchor: "middle" },
+                      position: "left",
+                    }
+                  : null
+              }
               strokeOpacity={1}
               stroke={stroke}
               key={x}
