@@ -241,9 +241,11 @@ export const Dashboard = () => {
         !weighRecent,
       );
 
+  const bestPrediction = getPrediction(lastArr, semestersDescending);
+
   const onMouseMove = (e) => setMouseMoveEvent(e);
 
-  console.log(mouseMoveEvent);
+  // console.log(mouseMoveEvent);
 
   return (
     <Wrapper
@@ -345,6 +347,7 @@ export const Dashboard = () => {
           data={lockedData}
           lines={lines}
           prediction={prediction && !isNaN(prediction.final.value) ? prediction.final : {}}
+          bestPrediction={bestPrediction ? bestPrediction.final : {}}
         ></MyLineChart>
       </div>
       <div></div>

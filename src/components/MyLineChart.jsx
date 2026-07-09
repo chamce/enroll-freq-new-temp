@@ -23,10 +23,31 @@ import { constants } from "../constants";
 // * style reference lines and add more descriptive labels
 // * checkbox to weight the model based on the most recent data (set weigh_recent to true) (explain what that means)
 // * vertical line to label where forecast starts
-// / how to handle pred value overlapping with y axis tick? (glow pred value)
-// / when mouse leaves line chart, set mouse move event to null
-// keep reference line values within the y axis domain (reference line values not in actual chart data)
+// * when mouse leaves line chart, set mouse move event to null
+// * keep reference line values within the y axis domain (reference line values not in actual chart data)
+// * how to handle pred value overlapping with y axis tick? (glow pred value)
+// could style overlapping pred value better
 // have explanations for additional checkboxes & maybe make vertical reference line labels horizontal (default)
+// prediction should only be available when set to days out?
+// should dataMax be in context to brush slice of data?
+
+function getNiceMax(value) {
+  if (value <= 0) return 0;
+
+  const exponent = Math.floor(Math.log10(value));
+  const magnitude = Math.pow(10, exponent);
+  const normalized = value / magnitude;
+
+  let niceNormalized;
+
+  if (normalized <= 1) niceNormalized = 1;
+  else if (normalized <= 2) niceNormalized = 2;
+  else if (normalized <= 2.5) niceNormalized = 2.5;
+  else if (normalized <= 5) niceNormalized = 5;
+  else niceNormalized = 10;
+
+  return niceNormalized * magnitude;
+}
 
 export const MyLineChart = memo(
   ({
@@ -43,6 +64,7 @@ export const MyLineChart = memo(
     lines,
     data,
     onMouseMove,
+    bestPrediction,
   }) => {
     const [{ clicked, entered }, setState] = useState({ clicked: null, entered: null });
 
@@ -103,7 +125,24 @@ export const MyLineChart = memo(
 
     const predLine = (Array.isArray(lines) ? lines : []).find(({ dataKey }) => dataKey === predTerm);
 
-    // console.log(referenceLines);
+    const numbers = data
+      .map((row) =>
+        Object.entries(row)
+          .filter(([, v]) => typeof v === "number")
+          .map(([, v]) => v),
+      )
+      .flat();
+
+    // console.log("brush", [brushStart, brushEnd]);
+
+    console.log(prediction, bestPrediction);
+
+    const contextualMax = Math.max(
+      ...numbers,
+      (Object.keys(prediction).length === 0 ? bestPrediction : prediction).upper_value,
+    );
+
+    const yDomain = ["dataMin", getNiceMax(contextualMax)];
 
     return (
       <ResponsiveContainer height={450}>
@@ -138,7 +177,7 @@ export const MyLineChart = memo(
               offset: 0,
             }}
             tickFormatter={(value) => formatNumber(value)}
-            domain={yMinMax}
+            domain={yDomain}
           ></YAxis>
           <Tooltip
             content={
