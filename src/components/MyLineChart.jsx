@@ -26,10 +26,13 @@ import { constants } from "../constants";
 // * when mouse leaves line chart, set mouse move event to null
 // * keep reference line values within the y axis domain (reference line values not in actual chart data)
 // * how to handle pred value overlapping with y axis tick? (glow pred value)
-// could style overlapping pred value better
+// * could style overlapping pred value better
 // have explanations for additional checkboxes & maybe make vertical reference line labels horizontal (default)
-// prediction should only be available when set to days out?
+// prediction should only be available when x is set to days and y is set to each day
 // should dataMax be in context to brush slice of data?
+
+// format prediction numbers
+// hover weigh recent shows--Weights are determined by the terms closest in value (most similar) to the term we want to predict.
 
 function getNiceMax(value) {
   if (value <= 0) return 0;
@@ -133,10 +136,6 @@ export const MyLineChart = memo(
       )
       .flat();
 
-    // console.log("brush", [brushStart, brushEnd]);
-
-    console.log(prediction, bestPrediction);
-
     const contextualMax = Math.max(
       ...numbers,
       (Object.keys(prediction).length === 0 ? bestPrediction : prediction).upper_value,
@@ -208,7 +207,7 @@ export const MyLineChart = memo(
             //   { x: 2, y: prediction.upper_value },
             // ]}
             y={prediction.upper_value}
-            label={{ value: prediction.upper_value, position: "insideBottomLeft" }}
+            label={{ value: prediction.upper_value.toLocaleString(), position: "insideBottomLeft" }}
           ></ReferenceLine>
           <ReferenceLine
             // segment={[
@@ -226,16 +225,17 @@ export const MyLineChart = memo(
             stroke={predLine && predLine.stroke}
             y={prediction.value}
             label={{
-              value: prediction.value,
+              className: "outlined-text",
+              value: prediction.value.toLocaleString(),
               position: "left",
-              style: { filter: "drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5))" },
+              // style: { filter: "drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5))" },
             }}
           ></ReferenceLine>
           <ReferenceLine
             // stroke={predLine && predLine.stroke}
             // strokeOpacity={0}
             y={prediction.lower_value}
-            label={{ value: prediction.lower_value, position: "insideTopLeft" }}
+            label={{ value: prediction.lower_value.toLocaleString(), position: "insideTopLeft" }}
           ></ReferenceLine>
           <ReferenceLine
             label={{
