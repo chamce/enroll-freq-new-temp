@@ -34,6 +34,8 @@ import { constants } from "../constants";
 // format prediction numbers
 // hover weigh recent shows--Weights are determined by the terms closest in value (most similar) to the term we want to predict.
 
+// min y value should factor in lower bound of pred
+
 function getNiceMax(value) {
   if (value <= 0) return 0;
 
@@ -207,7 +209,11 @@ export const MyLineChart = memo(
             //   { x: 2, y: prediction.upper_value },
             // ]}
             y={prediction.upper_value}
-            label={{ value: prediction.upper_value.toLocaleString(), position: "insideBottomLeft" }}
+            label={{
+              className: "outlined-text",
+              value: prediction.upper_value?.toLocaleString(),
+              position: "insideBottomLeft",
+            }}
           ></ReferenceLine>
           <ReferenceLine
             // segment={[
@@ -226,7 +232,7 @@ export const MyLineChart = memo(
             y={prediction.value}
             label={{
               className: "outlined-text",
-              value: prediction.value.toLocaleString(),
+              value: prediction.value?.toLocaleString(),
               position: "left",
               // style: { filter: "drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5))" },
             }}
@@ -235,7 +241,11 @@ export const MyLineChart = memo(
             // stroke={predLine && predLine.stroke}
             // strokeOpacity={0}
             y={prediction.lower_value}
-            label={{ value: prediction.lower_value.toLocaleString(), position: "insideTopLeft" }}
+            label={{
+              className: "outlined-text",
+              value: prediction.lower_value?.toLocaleString(),
+              position: "insideTopLeft",
+            }}
           ></ReferenceLine>
           <ReferenceLine
             label={{

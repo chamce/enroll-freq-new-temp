@@ -39,7 +39,7 @@ export const Dashboard = () => {
   const data = usePromise(promise);
   const [tooltipOn, setTooltipOn] = useState(true);
   const [forecastOn, setForecastOn] = useState(false);
-  const [weighRecent, setWeighRecent] = useState(false);
+  const [weighRecent, setWeighRecent] = useState(true);
   // const [freezePrediction, setFreezePrediction] = useState(true);
   const [meltFromZero, setMeltFromZero] = useState(true);
   const [xAxisSelection, setXAxisSelection] = useState(xAxisKeys[0]);
@@ -243,13 +243,13 @@ export const Dashboard = () => {
         weighRecent,
       );
 
-  const bestPrediction = getPrediction(lastArr, semestersDescending);
+  const bestPrediction = getPrediction(lastArr, semestersDescending, weighRecent);
 
   const onMouseMove = (e) => setMouseMoveEvent(e);
 
-  console.log(prediction);
-
   const shouldPredict = xAxisSelection === "days" && yAxisSelection === "each_day";
+
+  const note = bestPrediction ? bestPrediction.notes.join(" ") : "";
 
   return (
     <Wrapper
@@ -304,7 +304,7 @@ export const Dashboard = () => {
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
                 type="button"
-                data-tooltip="Weights are determined by the terms closest in value (most similar) to the term we want to predict."
+                data-tooltip={note}
               >
                 <Checkbox active={weighRecent}></Checkbox>
                 Weigh recent terms more
@@ -376,7 +376,7 @@ const getPrediction = (arr, semestersDescending, weighRecent) => {
         return el;
       });
 
-      return new Predict(newArr, {}, 3, weighRecent);
+      return new Predict(newArr.filter(Boolean), {}, 3, weighRecent);
     }
   }
 };

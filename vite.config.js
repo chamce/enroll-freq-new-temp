@@ -1,19 +1,20 @@
-import react from "@vitejs/plugin-react";
+import { defineConfig as defConfig } from "vite";
 import eslint from "vite-plugin-eslint";
-import { defineConfig } from "vite";
-import { globalConst } from "vite-plugin-global-const";
+import react from "@vitejs/plugin-react";
 
-const wrapperUrl = "https://irserver2.eku.edu/libraries/remote/wrapper.cjs";
+import { patch } from "./src/utilities/patch";
 
-// https://vitejs.dev/config/
+const defineConfig = (config) => defConfig(patch(config));
+
 export default defineConfig({
-  plugins: [
-    react(),
-    eslint(),
-    globalConst({
-      wrapperUrl,
-    }),
-  ],
-  build: { outDir: "Y:/Reports/pc/daytodayenrollment/", copyPublicDir: false, emptyOutDir: false },
-  base: "",
+  build: {
+    rollupOptions: {
+      output: {
+        assetFileNames: "assets/my-style.css",
+        entryFileNames: "assets/my-app.js",
+        chunkFileNames: "assets/chunk.js", // Or a more dynamic name
+      },
+    },
+  },
+  plugins: [react(), eslint()],
 });
