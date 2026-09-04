@@ -1,5 +1,4 @@
 import { defineConfig as defConfig } from "vite";
-import eslint from "vite-plugin-eslint";
 import react from "@vitejs/plugin-react";
 
 import { patch } from "./src/utilities/patch";
@@ -16,5 +15,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [react(), eslint()],
+  plugins: [react()],
 });

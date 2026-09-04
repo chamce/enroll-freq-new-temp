@@ -1,3 +1,15 @@
+body {
+  --bs-bg-opacity: 1;
+  background-color: rgba(
+    var(--bs-tertiary-bg-rgb),
+    var(--bs-bg-opacity)
+  ) !important;
+}
+
+button.btn:not(.btn-ghost) {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
 .recharts-surface {
   overflow: visible;
 }
@@ -7,12 +19,11 @@
 }
 
 .outlined-text {
-  /* fill: #ffffff; */
   stroke: white;
   stroke-width: 4px;
   paint-order: stroke fill;
   stroke-linejoin: round;
-  filter: drop-shadow(0px 0px 4px rgba(255, 255, 255, 1));
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 1));
 }
 
 .my-tooltip {
@@ -23,27 +34,20 @@
 .my-tooltip::after {
   content: attr(data-tooltip);
   position: absolute;
-
   top: 100%;
-  left: 0%;
-  /* transform: translateX(-50%); */
-
+  left: 0;
   margin-top: 8px;
   padding: 6px 10px;
-
   background: #222;
   color: white;
   border-radius: 4px;
   font-size: 0.875rem;
   line-height: 1.35;
-
   max-width: 320px;
   width: max-content;
   white-space: normal;
   overflow-wrap: break-word;
-
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
-
   opacity: 0;
   pointer-events: none;
   transition: opacity 150ms ease;

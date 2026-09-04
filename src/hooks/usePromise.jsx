@@ -1,18 +1,20 @@
-import { useEffect } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function usePromise(promise, initialState = []) {
   const [data, setData] = useState(initialState);
+
   useEffect(() => {
-    if (promise) {
-      let ignore = false;
-      promise.then((json) => {
-        if (!ignore) setData(json);
-      });
-      return () => {
-        ignore = true;
-      };
-    }
+    if (!promise) return undefined;
+
+    let ignore = false;
+    promise.then((result) => {
+      if (!ignore) setData(result);
+    });
+
+    return () => {
+      ignore = true;
+    };
   }, [promise]);
+
   return data;
 }
